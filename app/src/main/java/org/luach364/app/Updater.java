@@ -55,8 +55,11 @@ public final class Updater {
         Renderer.Opts o = new Renderer.Opts();
         o.topPct = p.getInt("top", 30) / 100f;
         o.dial = p.getBoolean("dial", true);
-        o.place = p.getString("place", "אשקלון");
+        o.lang = I18n.get(p.getString("lang", "he"));
+        int city = p.getInt("city", 0);
+        o.place = city < 6 ? o.lang.city[city] : "";
         o.bg = bg;
+        o.theme = "dark".equals(p.getString("theme", "light")) ? Renderer.dark() : Renderer.light();
         return o;
     }
 
@@ -64,6 +67,6 @@ public final class Updater {
     public static String cfgKey(Context c) {
         SharedPreferences p = prefs(c);
         return p.getString("lat", "") + p.getString("lon", "") + p.getInt("top", 30) + p.getBoolean("dial", true)
-                + p.getLong("bgVer", 0) + p.getString("place", "");
+                + p.getLong("bgVer", 0) + p.getString("place", "") + p.getString("theme", "light") + p.getString("lang", "he") + p.getInt("city", 0);
     }
 }

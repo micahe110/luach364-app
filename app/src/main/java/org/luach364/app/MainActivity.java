@@ -81,7 +81,7 @@ public class MainActivity extends Activity {
             c.translate((getWidth() - W * sc) / 2f, 0);
             c.scale(sc, sc);
             c.drawBitmap(layer, 0, 0, null);
-            if (opts.dialHalf > 0) Renderer.drawHands(c, opts.dialCx, opts.dialCy, opts.dialHalf, now);
+            if (opts.dialHalf > 0) Renderer.drawHands(c, opts.dialCx, opts.dialCy, opts.dialHalf, now, opts.theme);
             c.restore();
             postInvalidateDelayed(1000 - (System.currentTimeMillis() % 1000) + 10);
         }
@@ -91,21 +91,40 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle b) {
         super.onCreate(b);
         p = Updater.prefs(this);
+        final I18n.L L = I18n.get(p.getString("lang", "he"));
 
         ScrollView sv = new ScrollView(this);
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        root.setLayoutDirection(L.rtl ? View.LAYOUT_DIRECTION_RTL : View.LAYOUT_DIRECTION_LTR);
         root.setPadding(dp(16), dp(16), dp(16), dp(32));
         sv.addView(root);
 
         TextView title = new TextView(this);
-        title.setText("לוח 364 · שעון חנוך");
+        title.setText(L.uiTitle);
         title.setTextSize(24); title.setGravity(Gravity.CENTER); title.setTextColor(0xFFE8D48B);
         root.addView(title);
 
+        // בחירת שפה
+        root.addView(label(L.uiLang));
+        Spinner lang = new Spinner(this);
+        lang.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, I18n.NAMES));
+        int cur = 0;
+        for (int i = 0; i < I18n.CODES.length; i++) if (I18n.CODES[i].equals(L.code)) cur = i;
+        lang.setSelection(cur);
+        final int curLang = cur;
+        lang.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(AdapterView<?> a, View v, int pos, long id) {
+                if (pos == curLang) return;
+                p.edit().putString("lang", I18n.CODES[pos]).apply();
+                recreate();
+            }
+            @Override public void onNothingSelected(AdapterView<?> a) { }
+        });
+        root.addView(lang);
+
         TextView hint = new TextView(this);
-        hint.setText("רקע חי: במסך הנעילה — שעון חנוך בזמן אמת והתאריך המקראי. במסך הבית — רק התמונה שלך.");
+        hint.setText(L.uiHint);
         hint.setGravity(Gravity.CENTER); hint.setTextColor(0xFF9FB2D6); hint.setPadding(0, dp(4), 0, dp(10));
         root.addView(hint);
 
@@ -117,7 +136,7 @@ public class MainActivity extends Activity {
         info.setGravity(Gravity.CENTER);
         root.addView(info);
 
-        Button set = button("הגדר כרקע (לבחור: מסך הבית ומסך הנעילה)");
+        Button set = button(L.uiSet);
         set.setOnClickListener(v -> {
             Intent i = new Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER);
             i.putExtra(WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT, new ComponentName(this, LuachWallpaper.class));
@@ -129,7 +148,7 @@ public class MainActivity extends Activity {
         });
         root.addView(set);
 
-        Button pick = button("בחר תמונת רקע");
+        Button pick = button(L.uiPick);
         pick.setOnClickListener(v -> {
             Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
             i.addCategory(Intent.CATEGORY_OPENABLE);
@@ -138,7 +157,7 @@ public class MainActivity extends Activity {
         });
         root.addView(pick);
 
-        Button clear = button("בלי תמונה (רקע כהה)");
+        Button clear = button(L.uiNoBg);
         clear.setOnClickListener(v -> {
             //noinspection ResultOfMethodCallIgnored
             Updater.bgFile(this).delete();
@@ -148,20 +167,27 @@ public class MainActivity extends Activity {
         root.addView(clear);
 
         CheckBox dial = new CheckBox(this);
-        dial.setText("להציג את שעון חנוך");
+        dial.setText(L.uiDial);
         dial.setTextColor(Color.WHITE);
         dial.setChecked(p.getBoolean("dial", true));
         dial.setOnCheckedChangeListener((v, on) -> { p.edit().putBoolean("dial", on).apply(); refresh(); });
         root.addView(dial);
 
+        CheckBox dark = new CheckBox(this);
+        dark.setText(L.uiDark);
+        dark.setTextColor(Color.WHITE);
+        dark.setChecked("dark".equals(p.getString("theme", "light")));
+        dark.setOnCheckedChangeListener((v, on) -> { p.edit().putString("theme", on ? "dark" : "light").apply(); refresh(); });
+        root.addView(dark);
+
         CheckBox home = new CheckBox(this);
-        home.setText("להציג את השעון והתאריך גם במסך הבית");
+        home.setText(L.uiHome);
         home.setTextColor(Color.WHITE);
         home.setChecked(p.getBoolean("home", false));
         home.setOnCheckedChangeListener((v, on) -> p.edit().putBoolean("home", on).apply());
         root.addView(home);
 
-        root.addView(label("גובה התוכן במסך (כדי לא להתנגש בשעון של סמסונג)"));
+        root.addView(label(L.uiHeight));
         SeekBar top = new SeekBar(this);
         top.setMax(45);
         top.setProgress(p.getInt("top", 30) - 10);
@@ -174,9 +200,9 @@ public class MainActivity extends Activity {
         });
         root.addView(top);
 
-        root.addView(label("מיקום לחישוב זריחה ושקיעה"));
+        root.addView(label(L.uiLoc));
         city = new Spinner(this);
-        city.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, CITY));
+        city.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, L.city));
         root.addView(city);
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
@@ -185,22 +211,22 @@ public class MainActivity extends Activity {
         row.addView(latE, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         row.addView(lonE, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         root.addView(row);
-        Button saveLoc = button("שמור מיקום");
+        Button saveLoc = button(L.uiSaveLoc);
         saveLoc.setOnClickListener(v -> {
             try {
                 Double.parseDouble(latE.getText().toString().trim());
                 Double.parseDouble(lonE.getText().toString().trim());
             } catch (NumberFormatException e) {
-                Toast.makeText(this, "קו רוחב/אורך לא תקין", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, L.uiBadLoc, Toast.LENGTH_SHORT).show();
                 return;
             }
             int sel = city.getSelectedItemPosition();
             p.edit().putString("lat", latE.getText().toString().trim())
                     .putString("lon", lonE.getText().toString().trim())
-                    .putString("place", sel < COORD.length ? CITY[sel] : "")
+                    .putString("place", sel < COORD.length ? L.city[sel] : "")
                     .putInt("city", sel).apply();
             refresh();
-            Toast.makeText(this, "נשמר", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, L.uiSaved, Toast.LENGTH_SHORT).show();
         });
         root.addView(saveLoc);
         city.setSelection(p.getInt("city", 0));
@@ -239,11 +265,9 @@ public class MainActivity extends Activity {
     }
 
     void refresh() {
+        I18n.L L = I18n.get(p.getString("lang", "he"));
         Luach.State s = Updater.state(this, ZonedDateTime.now());
-        Luach.Z z = s.z;
-        String t = z.ic ? "שבוע העיבור · יום " + Luach.gem(z.icDay)
-                : Luach.gem(z.day) + " לחודש " + Luach.MONTH_ORD[z.month - 1] + " · שנה " + Luach.gem(z.year) + " · משמרת " + z.cin;
-        info.setText(t + "\nזריחה " + Luach.hhmm(s.rise) + " · שקיעה " + Luach.hhmm(s.set));
+        info.setText(I18n.title(L, s.z) + "\n" + I18n.courseLine(L, s.z) + "\n" + I18n.sunLine(L, s));
         preview.invalidateLayer();
     }
 
@@ -264,7 +288,7 @@ public class MainActivity extends Activity {
             int n;
             while ((n = in.read(buf)) > 0) os.write(buf, 0, n);
         } catch (Exception e) {
-            Toast.makeText(this, "לא הצלחתי לקרוא את התמונה", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, I18n.get(p.getString("lang", "he")).uiBadImg, Toast.LENGTH_LONG).show();
             return;
         }
         p.edit().putLong("bgVer", System.currentTimeMillis()).apply();

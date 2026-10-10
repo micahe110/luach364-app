@@ -151,7 +151,7 @@ public class LuachWallpaper extends WallpaperService {
             c.drawBitmap(layer, left, 0, null);
             if (layerOpts.dialHalf > 0) {
                 c.save(); c.translate(left, 0);
-                Renderer.drawHands(c, layerOpts.dialCx, layerOpts.dialCy, layerOpts.dialHalf, now);
+                Renderer.drawHands(c, layerOpts.dialCx, layerOpts.dialCy, layerOpts.dialHalf, now, layerOpts.theme);
                 c.restore();
             }
         }
